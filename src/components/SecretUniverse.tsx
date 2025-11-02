@@ -40,6 +40,7 @@ function burstConfetti(count = 40) {
 }
 
 export default function SecretUniverse() {
+  const [webglAvailable, setWebglAvailable] = useState(true);
   const [secretWord, setSecretWord] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -215,6 +216,7 @@ export default function SecretUniverse() {
   return (
     <div ref={containerRef} className="relative w-full min-h-screen bg-black overflow-hidden">
       <div className="absolute inset-0 w-full h-screen">
+        {webglAvailable ? (
         <Canvas
           gl={{ 
             powerPreference: "high-performance",
@@ -228,10 +230,14 @@ export default function SecretUniverse() {
             const canvas = gl.domElement;
             canvas.addEventListener('webglcontextlost', (e) => {
               e.preventDefault();
-              console.log('WebGL context lost. Attempting recovery...');
+              console.warn('WebGL context lost. Falling back to non-WebGL view.');
+              setWebglAvailable(false);
             }, false);
             canvas.addEventListener('webglcontextrestored', () => {
-              console.log('WebGL context restored.');
+              console.info('WebGL context restored. Attempting to re-enable canvas.');
+              setWebglAvailable(true);
+              // A full reload is often required to restore all GL state gracefully
+              // but we prefer to let the browser handle it if it recovers.
             }, false);
           }}
         >
@@ -247,6 +253,30 @@ export default function SecretUniverse() {
           <ParallaxCamera />
           <FloatingShapes />
         </Canvas>
+        ) : (
+          // Simple fallback when WebGL is unavailable: show the surprise video and a reload control.
+          <div className="w-full h-full flex items-center justify-center bg-black">
+            <div className="text-center">
+              <p className="text-white mb-4">Graphics unavailable — showing fallback.</p>
+              <div className="w-full max-w-3xl h-[40vh] mx-auto bg-black rounded overflow-hidden mb-4">
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-contain bg-black"
+                  src={videoUrl}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div className="flex items-center justify-center gap-4">
+                <button onClick={() => window.location.reload()} className="px-4 py-2 bg-purple-600 text-white rounded">Reload page</button>
+                <button onClick={() => setWebglAvailable(true)} className="px-4 py-2 bg-gray-700 text-white rounded">Try WebGL again</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="relative z-10 flex flex-col items-center justify-end min-h-screen px-4 pb-24">
